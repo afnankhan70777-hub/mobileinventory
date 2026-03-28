@@ -1,0 +1,5 @@
+{
+  "description": "Backup / import template for Mobile Inventory. Use Import in the app to load. Data is stored in the browser (IndexedDB); this file is optional seed or export format.",
+  "products": [],
+  "invoices": []
+}

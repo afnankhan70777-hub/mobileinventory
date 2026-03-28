@@ -1,0 +1,1194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mobile Inventory — Integrated</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <meta name="theme-color" content="#2563eb">
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/869/869636.png">
+</head>
+<body>
+    <a href="#main" class="skip-link">Skip to content</a>
+    <div class="container">
+        <header>
+            <div class="header-content">
+                <div class="header-left">
+                    <div>
+                        <h1 id="shopHeader">📱 The Mobile Shop</h1>
+                        <p id="shopSubHeader" class="subtitle">Licensed Version</p>
+                    </div>
+                    <div class="header-actions">
+                        <div class="search-box"><input id="global-search" aria-label="Search inventory" placeholder="Search inventory or IMEI..."></div>
+                    </div>
+                </div>
+                <div class="header-actions">
+                    <button id="theme-toggle" class="theme-toggle" aria-label="Toggle Dark Mode">🌙</button>
+                    <div id="debug-status"></div>
+                </div>
+            </div>
+        </header>
+
+            <div class="quick-actions" style="padding:12px 20px; display:flex; gap:10px; align-items:center;">
+                <button id="csv-template" class="btn">Download CSV Template</button>
+                <button id="export-sales-csv" class="btn">Export Sales CSV</button>
+                <button id="export-btn" class="btn">Export JSON</button>
+                <button id="import-btn" class="btn">Import</button>
+                <button id="clear-data" class="btn btn-danger">Clear All Data</button>
+                <input id="file-import" type="file" accept=".json,.csv" style="display:none">
+            </div>
+
+        <section class="dashboard">
+            <div class="stat-card">
+                <h3>Total Inventory Value</h3>
+                <p class="stat-value" id="k-value">Rs. 0</p>
+            </div>
+        </section>
+
+        <div class="tabs">
+            <button class="nav-btn tab-btn active" data-tab="inventory" data-view="inventory" onclick="showView('inventory')">Inventory</button>
+            <button class="nav-btn tab-btn" data-tab="add-product" data-view="add-product" onclick="showView('add-product')">Add Product</button>
+            <button class="nav-btn tab-btn" data-tab="sales" data-view="sales" onclick="showView('sales')">Record Sale</button>
+            <button class="nav-btn tab-btn" data-tab="reports" data-view="reports" onclick="showView('reports')">Reports</button>
+        </div>
+
+        <main id="main">
+            <section id="inventory" class="view tab-content" data-view="inventory">
+                <div class="section-header">
+                    <h2>Current Inventory</h2>
+                        <div class="section-controls">
+                            <div class="search-box"></div>
+                            <div class="sort-wrap">
+                                <label for="sort-select" class="sort-label">Sort by price</label>
+                                <select id="sort-select" aria-label="Sort inventory" class="sort-select"><option value="price-asc">Price ↑</option><option value="price-desc">Price ↓</option></select>
+                            </div>
+                            <div class="filter-buttons desktop-only">
+                                <button onclick="filterByStatus('all')" class="filter-btn active" id="filter-all">All</button>
+                            </div>
+                            <div class="mobile-only">
+                                <select id="filter-select" aria-label="Filter inventory" class="sort-select">
+                                    <option value="all">All</option>
+                                </select>
+                            </div>
+                        </div>
+                </div>
+                <div id="inventoryList" class="inventory-list" role="list"></div>
+            </section>
+
+            <section id="add-product" class="view tab-content" data-view="add-product" hidden>
+                <h2>Add New Product</h2>
+                <form id="pf-form" class="form">
+                    <div class="form-group">
+                        <label>Model</label>
+                        <input id="pf-model" required placeholder="e.g. iPhone 12">
+                        <div class="form-error" id="pf-model-error" aria-live="polite"></div>
+                    </div>
+                    <div class="form-group">
+                        <label>Type</label>
+                        <select id="pf-type"><option value="boxed">Boxed</option><option value="opened">Opened</option></select>
+                    </div>
+                        <div class="form-row">
+                        <div class="form-group"><label>Price (Sale)</label><input id="pf-price" type="number" min="0" step="0.01"></div>
+                        <div class="form-group"><label>Cost (Purchase)</label><input id="pf-cost" type="number" min="0" step="0.01" placeholder="optional"></div>
+                        <div class="form-group"><label>IMEIs (one per line)</label><textarea id="pf-imeis" rows="4"></textarea><div id="pf-imei-dup" class="form-error" aria-live="polite"></div></div>
+                    </div>
+                    <div class="form-group"><label>Upload Images (optional)</label>
+                        <input id="pf-images" type="file" accept="image/*" multiple>
+                        <div style="font-size:0.85rem; color:var(--text-light); margin-top:6px">First image will be used on the product card; all uploaded images are shown in the product details.</div>
+                    </div>
+                    <div class="form-actions" style="display:flex; gap:10px">
+                        <button id="pf-save" class="btn btn-primary" type="button" disabled>Save</button>
+                        <button id="pf-clear" class="btn" type="button">Clear</button>
+                    </div>
+                </form>
+            </section>
+
+            <section id="sales" class="view tab-content" data-view="sales" hidden>
+                <h2>Record Sale</h2>
+                <div class="form">
+                    <div class="form-group"><label>Select Product</label><select id="s-product"></select></div>
+                    <div class="form-group"><label>IMEI</label><select id="s-imei"></select></div>
+                    <div class="form-row">
+                        <div class="form-group"><label>Sale Price (Rs.)</label><input id="s-sale-price" type="number" min="0" step="0.01" placeholder="Enter sale price"></div>
+                        <div class="form-group"><label>Paid (Rs.)</label><input id="s-paid" type="number" min="0" step="0.01" placeholder="Amount received"></div>
+                        <div class="form-group"><label>Customer</label><input id="s-customer-display" placeholder="Customer name (optional)"></div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group"><label>Change (Rs.)</label><input id="s-change" type="text" readonly placeholder="Change due" /></div>
+                    </div>
+                    <div class="form-actions"><button id="s-sell" class="btn btn-primary">Sell</button></div>
+                </div>
+                <input id="s-customer" type="hidden" value="Walk-in">
+                <div class="recent-sales"><h3>Recent Sales</h3><div id="recentSalesList"></div></div>
+                <div id="receipt" style="display:none"></div>
+            </section>
+
+            <section id="reports" class="view tab-content" data-view="reports" hidden>
+                <h2>Reports</h2>
+                <div class="panel report-section">
+                    <h3>Sales Accounting</h3>
+                    <div id="accountingSummary" class="accounting-grid" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:12px; margin-bottom:12px"></div>
+                    <div style="margin:8px 0; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                      <label for="reports-from">From</label>
+                      <input id="reports-from" type="date">
+                      <label for="reports-to">To</label>
+                      <input id="reports-to" type="date">
+                      <button id="reports-refresh" class="btn">Refresh</button>
+                      <button id="reports-export-accounting" class="btn">Export Accounting CSV</button>
+                      <button id="reports-export-sales" class="btn">Export Sales CSV</button>
+                    </div>
+                    <p style="color:var(--text-muted); font-size:0.9rem">Showing sales accounting for sold IMEIs in the selected date range (Revenue, COGS, Gross Profit, Units Sold, Inventory Valuation).</p>
+                    <div id="salesSummary" style="margin-top:12px"></div>
+                    <div id="topProducts" style="margin-top:10px"></div>
+                    <div id="grossProfitCard" style="margin:12px 0"></div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+        <div id="toast" class="notification" aria-live="polite" aria-atomic="true"></div>
+        <script>
+            try{ const ds = document.getElementById('debug-status'); if(ds) ds.textContent = 'initializing' }catch(e){}
+        </script>
+
+        <div id="diag-overlay" style="display:none; position:fixed; inset:12px; background:rgba(255,255,255,0.95); border:2px solid #e53e3e; padding:18px; z-index:9999; overflow:auto"> 
+            <h3 style="margin:0 0 8px 0; color:#b91c1c">App failed to initialize</h3>
+            <p style="margin:0 0 8px 0">If the app appears blank, open DevTools → Console. This build uses a single HTML file with inline script (no separate js/).</p>
+            <div style="margin-top:10px"><button id="diag-hide" class="btn">Hide</button></div>
+        </div>
+        <script>
+            setTimeout(()=>{
+                try{
+                    const ds = document.getElementById('debug-status');
+                    const v = ds && ds.textContent && ds.textContent.trim();
+                    if(!v || v.length < 1){ document.getElementById('diag-overlay').style.display = 'block' }
+                }catch(e){}
+                const hide = document.getElementById('diag-hide'); if(hide) hide.addEventListener('click', ()=> document.getElementById('diag-overlay').style.display='none')
+            }, 2500)
+        </script>
+
+<script>
+// Minimal IndexedDB helper
+async function openDB(name='inventory-db', version=1){
+  return new Promise((resolve, reject)=>{
+    const req = indexedDB.open(name, version)
+    req.onupgradeneeded = (e)=>{
+      const db = e.target.result
+      if(!db.objectStoreNames.contains('products')) db.createObjectStore('products', { keyPath: 'id' })
+      if(!db.objectStoreNames.contains('invoices')) db.createObjectStore('invoices', { keyPath: 'id' })
+    }
+    req.onsuccess = ()=> resolve(req.result)
+    req.onerror = ()=> reject(req.error)
+  })
+}
+
+function tx(storeName, mode='readonly'){ return async function(db, fn){ const t = db.transaction(storeName, mode); const store = t.objectStore(storeName); return await fn(store) } }
+
+async function getAll(storeName){ const db = await openDB(); return new Promise((res,rej)=>{ const t = db.transaction(storeName,'readonly'); const cur = t.objectStore(storeName).openCursor(); const out=[]; cur.onsuccess = ()=>{ const r = cur.result; if(r){ out.push(r.value); r.continue() } else res(out) }; cur.onerror = ()=> rej(cur.error) }) }
+
+async function put(storeName, obj){ const db = await openDB(); return new Promise((res,rej)=>{ const t = db.transaction(storeName,'readwrite'); const s = t.objectStore(storeName); const req = s.put(obj); req.onsuccess = ()=> res(req.result); req.onerror = ()=> rej(req.error) }) }
+
+async function remove(storeName, key){ const db = await openDB(); return new Promise((res,rej)=>{ const t = db.transaction(storeName,'readwrite'); const s = t.objectStore(storeName); const req = s.delete(key); req.onsuccess = ()=> res(); req.onerror = ()=> rej(req.error) }) }
+
+async function clear(storeName){ const db = await openDB(); return new Promise((res,rej)=>{ const t = db.transaction(storeName,'readwrite'); const s = t.objectStore(storeName); const req = s.clear(); req.onsuccess = ()=> res(); req.onerror = ()=> rej(req.error) }) }
+
+// Simple toast notification
+function toast(msg) {
+	let el = document.getElementById('toast');
+	if (!el) {
+		el = document.createElement('div');
+		el.id = 'toast';
+		el.style.position = 'fixed';
+		el.style.bottom = '24px';
+		el.style.left = '50%';
+		el.style.transform = 'translateX(-50%)';
+		el.style.background = 'rgba(0,0,0,0.85)';
+		el.style.color = '#fff';
+		el.style.padding = '12px 24px';
+		el.style.borderRadius = '6px';
+		el.style.zIndex = 9999;
+		el.style.fontSize = '1.1em';
+		el.style.transition = 'opacity 0.3s';
+		el.style.opacity = 0;
+		document.body.appendChild(el);
+	}
+	el.textContent = msg;
+	el.style.opacity = 1;
+	setTimeout(() => {
+		el.style.opacity = 0;
+	}, 2500);
+}
+// small shared helpers for client modules
+
+function escapeHtml(str) {
+	if (str == null) return '';
+	return String(str).replace(/[&<>'"]/g, s => ({
+		'&': '&amp;',
+		'<': '&lt;',
+		'>': '&gt;',
+		"'": "&#39;",
+		'"': '&quot;'
+	}[s]));
+}
+
+function formatCurrency(val) {
+	if (val == null || isNaN(val)) return '';
+	return 'Rs. ' + Number(val).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+// CSV helpers: parse simple CSV and export array to CSV
+function parseCSV(text){
+  const lines = text.trim().split(/\r?\n/).map(l=>l.trim()).filter(Boolean)
+  const headers = lines.shift().split(',').map(h=>h.trim())
+  return lines.map(line=>{
+    const cols = line.split(',').map(c=>c.trim())
+    const obj = {}
+    headers.forEach((h,i)=> obj[h] = cols[i] || '')
+    return obj
+  })
+}
+
+function toCSV(rows){
+  if(!rows.length) return ''
+  const keys = Object.keys(rows[0])
+  const lines = [keys.join(',')]
+  rows.forEach(r=> lines.push(keys.map(k=> String(r[k]||'')).join(',')))
+  return lines.join('\n')
+}
+
+// Uses global `Chart` loaded by index.html
+let stockChart, salesChart
+function renderAnalytics(state){
+  // accept both kebab-case and camelCase ids for compatibility
+  const stockEl = document.getElementById('stock-chart') || document.getElementById('stockChart')
+  const salesEl = document.getElementById('sales-chart') || document.getElementById('salesChart')
+  if(!stockEl || !salesEl || typeof Chart === 'undefined') return
+  const stockCtx = stockEl.getContext('2d')
+  const salesCtx = salesEl.getContext('2d')
+  const labels = state.products.map(p=>p.model)
+  const dataStock = state.products.map(p=> (p.imeis||[]).length )
+  const salesByDay = {}
+  state.invoices.forEach(inv=>{ const d = new Date(inv.date).toISOString().slice(0,10); salesByDay[d] = (salesByDay[d]||0) + 1 })
+  const salesLabels = Object.keys(salesByDay).sort()
+  const salesData = salesLabels.map(d=> salesByDay[d])
+  if(stockChart) stockChart.destroy()
+  stockChart = new Chart(stockCtx, { type:'bar', data:{ labels, datasets:[{label:'Units (IMEIs)', data:dataStock, backgroundColor:'#0b76ff'}] }, options:{responsive:true,plugins:{legend:{display:false}}, animation:{duration:600}, scales:{y:{title:{display:true,text:'Units (IMEIs)'}}} } })
+  if(salesChart) salesChart.destroy()
+  salesChart = new Chart(salesCtx, { type:'line', data:{ labels:salesLabels, datasets:[{label:'Sales', data:salesData, borderColor:'#0b76ff', backgroundColor:'rgba(11,118,255,0.08)', fill:true, tension:0.3}] }, options:{responsive:true,plugins:{legend:{display:false}}, interaction:{mode:'index',intersect:false}} })
+
+  // KPIs: update any KPI elements if present
+  try{
+    const totalSales = state.invoices.length || 0
+    const itemsSold = state.invoices.reduce((s,inv)=> s + (inv.items? inv.items.reduce((ss,it)=> ss + ((it.imeis||[]).length||0),0):0), 0)
+    const totalRevenue = state.invoices.reduce((s,inv)=> s + (Number(inv.total)||0), 0)
+    const today = new Date().toISOString().slice(0,10)
+    const salesToday = state.invoices.filter(inv=> inv.date && inv.date.slice(0,10) === today).length
+    const salesMonth = state.invoices.filter(inv=> inv.date && inv.date.slice(0,7) === today.slice(0,7)).length
+    const elToday = document.getElementById('salesToday'); if(elToday) elToday.textContent = salesToday
+    const elMonth = document.getElementById('salesMonth'); if(elMonth) elMonth.textContent = salesMonth
+    const elProfit = document.getElementById('totalProfit'); if(elProfit) elProfit.textContent = analyticsKpiCurrency(totalRevenue)
+    const elItems = document.getElementById('itemsSold'); if(elItems) elItems.textContent = itemsSold
+    const topEl = document.getElementById('topProducts'); if(topEl){
+      // top products by remaining stock
+      const top = state.products.slice().sort((a,b)=> (b.imeis||[]).length - (a.imeis||[]).length).slice(0,5)
+      topEl.innerHTML = top.map(p=>`<div>${p.model} — ${(p.imeis||[]).length} in stock</div>`).join('')
+    }
+  }catch(e){ console.error('Failed to update KPIs', e) }
+}
+
+function analyticsKpiCurrency(v){ return 'Rs. '+Number(v||0).toFixed(2) }
+
+// Compute top sellers by IMEI units sold within optional date range
+function computeTopSellers(state, { from, to } = {}){
+  const counts = {} // model -> { units, revenue }
+  ;(state.invoices || []).forEach(inv => {
+    const invDate = new Date(inv.date)
+    if(from && invDate < from) return
+    if(to && invDate > to) return
+    ;(inv.items || []).forEach(item => {
+      const model = item.model || 'Unknown'
+      const qty = (item.imeis && item.imeis.length) || (item.quantity || 1)
+      const price = Number(item.sale_price != null ? item.sale_price : item.price || 0)
+      if(!counts[model]) counts[model] = { units:0, revenue:0 }
+      counts[model].units += qty
+      counts[model].revenue += price * qty
+    })
+  })
+  return Object.entries(counts).map(([model,v])=>({ model, units:v.units, revenue:v.revenue })).sort((a,b)=> b.units - a.units)
+}
+
+// Render top products into #topProducts element
+function renderTopProducts(state, opts={}){
+  const el = document.getElementById('topProducts')
+  if(!el) return
+  const tops = computeTopSellers(state, opts).slice(0,10)
+  const productsByModel = (state.products||[]).reduce((m,p)=>{ m[p.model]=p; return m },{})
+  if(!tops.length){ el.innerHTML = '<div>No sales in range</div>'; return }
+  el.innerHTML = tops.map(t=>{
+    // Intentionally do not display stock or unit counts here; show model and revenue only
+    return `<div><strong>${escapeHtml(t.model)}</strong> — Rs. ${t.revenue.toFixed(2)}</div>`
+  }).join('')
+}
+
+// Inventory snapshot: models, units (IMEIs), value
+function renderInventorySnapshot(state){
+  const container = document.getElementById('inventorySnapshot');
+  if(!container) return
+  const rows = (state.products||[]).map(p=>({ model:p.model, value: ((p.price||0) * ((p.imeis||[]).length||0)) }))
+  if(!rows.length){ container.innerHTML = '<div>No inventory</div>'; return }
+  container.innerHTML = `<table class="products-table"><thead><tr><th>Model</th><th>Value</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${escapeHtml(r.model)}</td><td>Rs. ${r.value.toFixed(2)}</td></tr>`).join('')}</tbody></table>`
+}
+
+// CSV export for top sellers
+function exportTopSellersCSV(state, opts={}){
+  const tops = computeTopSellers(state, opts)
+  const rows = [['model','units','revenue','in_stock']]
+  const productsByModel = (state.products||[]).reduce((m,p)=>{ m[p.model]=p; return m },{})
+  tops.forEach(t=> rows.push([t.model, String(t.units), t.revenue.toFixed(2), String((productsByModel[t.model] && (productsByModel[t.model].imeis||[]).length)||0)]))
+  const csv = rows.map(r=> r.map(c=> '"'+String(c).replace(/"/g,'""')+'"').join(',')).join('\n')
+  const blob = new Blob([csv],{type:'text/csv'})
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'top-sellers.csv'; a.click(); URL.revokeObjectURL(a.href)
+}
+
+// Small helper: parse date inputs
+function parseDateInputs(){
+  const f = document.getElementById('reports-from')
+  const t = document.getElementById('reports-to')
+  return { from: f && f.value ? new Date(f.value) : null, to: t && t.value ? new Date(t.value) : null }
+}
+
+// Accounting computations (IMEI-first)
+function computeAccounting(state, opts = {}, defaultCostPct = 0.7){
+  const { from, to } = opts || {}
+  const productsByModel = (state.products||[]).reduce((m,p)=>{ m[p.model]=p; return m },{})
+  let revenue = 0, cogs = 0, unitsSold = 0
+  const perModel = {}
+  ;(state.invoices || []).forEach(inv=>{
+    const invDate = new Date(inv.date)
+    if(from && invDate < from) return
+    if(to && invDate > to) return
+    // tax removed — not tracked
+    ;(inv.items || []).forEach(item=>{
+      const qty = (item.imeis && item.imeis.length) || (item.quantity || 1)
+      unitsSold += qty
+      const model = item.model || 'Unknown'
+      const prod = productsByModel[model]
+      // Use recorded sale_price when available for accurate revenue
+      const unitSalePrice = Number(item.sale_price != null ? item.sale_price : (item.price || 0)) || 0
+      revenue += unitSalePrice * qty
+      // determine unit cost: prefer invoice item.cost (per-IMEI), then product.cost, then fallback to price*defaultCostPct
+      const unitCost = (item && item.cost != null) ? Number(item.cost) : ((prod && prod.cost != null) ? Number(prod.cost) : (Number(item.price || 0) * defaultCostPct))
+      const itemCogs = unitCost * qty
+      cogs += itemCogs
+      if(!perModel[model]) perModel[model] = { units:0, revenue:0, cogs:0 }
+      perModel[model].units += qty
+      perModel[model].revenue += unitSalePrice * qty
+      perModel[model].cogs += itemCogs
+    })
+  })
+  // inventory valuation based on remaining IMEIs
+  let inventoryValuation = 0
+  ;(state.products||[]).forEach(p=>{
+    const imeis = (p.imeis||[])
+    imeis.forEach(i=>{
+      const unitCost = (p.imeiCosts && p.imeiCosts[i] != null) ? Number(p.imeiCosts[i]) : ((p.cost != null) ? Number(p.cost) : (Number(p.price||0) * defaultCostPct))
+      inventoryValuation += unitCost
+    })
+  })
+  const grossProfit = revenue - cogs
+  return { revenue, cogs, unitsSold, grossProfit, inventoryValuation, perModel }
+}
+
+function renderAccounting(state, opts = {}){
+  const summaryEl = document.getElementById('accountingSummary')
+  const grossEl = document.getElementById('grossProfitCard')
+  if(!summaryEl || !grossEl) return
+  const a = computeAccounting(state, opts)
+  // populate summary cards
+    const cards = [
+    { k: 'Revenue', v: a.revenue },
+    { k: 'COGS', v: a.cogs },
+    { k: 'Gross Profit', v: a.grossProfit },
+    { k: 'Inventory Valuation', v: a.inventoryValuation }
+  ]
+  summaryEl.innerHTML = cards.map(c=>`<div class="kpi-card"><div class="kpi-label">${escapeHtml(c.k)}</div><div class="kpi-value">Rs. ${Number(c.v).toFixed(2)}</div></div>`).join('')
+
+  // gross profit card (prominent)
+  const gp = a.grossProfit || 0
+  const gpLabel = gp < 0 ? 'Gross Loss' : 'Gross Profit'
+  grossEl.innerHTML = `<div class="kpi-card large"><div class="kpi-label">${gpLabel}</div><div class="kpi-value">Rs. ${Number(gp).toFixed(2)}</div></div>`
+
+  // Render a bar chart of revenue per model (top 8 models)
+  const canvas = document.getElementById('salesLineChart')
+  if(!canvas) return
+  if(canvas._chartInstance){ canvas._chartInstance.destroy(); canvas._chartInstance = null }
+  const models = Object.entries(a.perModel || {}).map(([m,v])=>({ model:m, revenue:v.revenue || 0 })).sort((x,y)=> y.revenue - x.revenue).slice(0,8)
+  const labels = models.map(m=>m.model)
+  const revenueData = models.map(m=> Number(m.revenue || 0))
+  const ctx = canvas.getContext('2d')
+  canvas._chartInstance = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [ { label: 'Revenue (Rs.)', data: revenueData, backgroundColor: labels.map((_,i)=> i%2? 'rgba(99,102,241,0.9)' : 'rgba(37,99,235,0.9)') } ]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display:false }, tooltip: { mode: 'index', intersect: false } },
+      scales: { y: { title: { display:true, text:'Revenue (Rs.)' }, ticks:{ beginAtZero:true } } }
+    }
+  })
+}
+
+function exportAccountingCSV(state, opts = {}){
+  const a = computeAccounting(state, opts)
+  const rows = [['metric','value'], ['revenue', a.revenue.toFixed(2)], ['cogs', a.cogs.toFixed(2)], ['grossProfit', a.grossProfit.toFixed(2)], ['unitsSold', String(a.unitsSold)], ['inventoryValuation', a.inventoryValuation.toFixed(2)]]
+  const csv = rows.map(r=> r.map(c=> '"'+String(c).replace(/"/g,'""')+'"').join(',')).join('\n')
+  const blob = new Blob([csv],{type:'text/csv'})
+  const ael = document.createElement('a'); ael.href = URL.createObjectURL(blob); ael.download = 'accounting-summary.csv'; ael.click(); URL.revokeObjectURL(ael.href)
+}
+
+// Export detailed sales CSV: one row per sold IMEI
+function exportSalesCSV(state){
+  const rows = []
+  const headers = ['invoice_id','invoice_date','customer','model','imei','sale_price','cost','profit','total']
+  rows.push(headers)
+  ;(state.invoices || []).forEach(inv=>{
+    const invId = inv.id || ''
+    const invDate = inv.date || ''
+    const customer = inv.customer || ''
+    const total = Number(inv.total || inv.paid || 0)
+    ;(inv.items || []).forEach(item =>{
+      const model = item.model || ''
+      const costVal = (item.cost != null) ? Number(item.cost) : ((state.products||[]).find(p=>p.model===model && p.cost!=null) ? state.products.find(p=>p.model===model).cost : '')
+      const cost = costVal === '' ? '' : Number(costVal)
+      const salePriceVal = Number(item.sale_price != null ? item.sale_price : item.price || 0)
+      const salePrice = isNaN(salePriceVal) ? '' : salePriceVal
+      const profit = (salePrice !== '' && cost !== '') ? (salePrice - cost) : ''
+      const imeis = (item.imeis || []).length ? (item.imeis || []) : [item.imei || '']
+      imeis.forEach(imei => rows.push([String(invId), String(invDate), String(customer), String(model), String(imei), String(salePrice), String(cost), String(profit), String(total)]))
+    })
+  })
+  const csv = rows.map(r=> r.map(c=> '"'+String(c).replace(/"/g,'""')+'"').join(',')).join('\n')
+  const blob = new Blob([csv],{type:'text/csv'})
+  const ael = document.createElement('a'); ael.href = URL.createObjectURL(blob); ael.download = 'sales-detail.csv'; ael.click(); URL.revokeObjectURL(ael.href)
+}
+
+function debug(msg, level = 'info') {
+  const el = document.querySelector('#debug-status');
+  if (el) el.textContent = msg;
+  if (level === 'error') console.error(msg);
+  else console.log(msg);
+}
+
+/** DOM helper — must support `#id` selectors (not getElementById with a `#` prefix). */
+function $(sel) {
+  return sel ? document.querySelector(sel) : null;
+}
+
+debug('initializing');
+
+// Helper: Read FileList as array of Data URLs (for image upload)
+async function readFilesAsDataURLs(fileList) {
+  if (!fileList || !fileList.length) return [];
+  const promises = Array.from(fileList).map(file => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  });
+  return Promise.all(promises);
+}
+
+// Load all products and invoices from IndexedDB for app state
+async function loadState() {
+  const products = await getAll('products');
+  let invoices = [];
+  try { invoices = await getAll('invoices'); } catch (e) {}
+  return { products, invoices };
+}
+
+// (removed duplicate renderKPIs)
+function renderKPIs(state) {
+  try {
+    const totalValue = state.products.reduce((sum, p) => {
+      const imeis = (p.imeis || []);
+      return sum + imeis.reduce((a, i) => {
+        const c = (p.imeiCosts && p.imeiCosts[i] != null)
+          ? Number(p.imeiCosts[i])
+          : ((p.cost != null)
+            ? Number(p.cost)
+            : (Number(p.price || 0) * 0.7));
+        return a + c;
+      }, 0);
+    }, 0);
+    const el = $('#k-value');
+    if (el) el.textContent = formatCurrency(totalValue);
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+async function renderSalesSelects(state) {
+  const sel = $('#s-product');
+  const imeiSel = $('#s-imei');
+  if (!sel || !imeiSel) return;
+  sel.innerHTML = '';
+  const empty = document.createElement('option');
+  empty.value = '';
+  empty.textContent = '-- Select product --';
+  sel.appendChild(empty);
+  state.products.forEach(p => {
+    if (!(p.imeis || []).length) return;
+    const o = document.createElement('option');
+    o.value = p.id;
+    o.textContent = `${p.model} (${p.type})`;
+    sel.appendChild(o);
+  });
+  if (sel.options.length > 1) {
+    sel.selectedIndex = 1;
+    const prod = state.products.find(p => String(p.id) === String(sel.value));
+    const sp = $('#s-sale-price');
+    if (sp && prod) sp.value = prod.price || '';
+  }
+  updateIMEIs();
+  updateSellButtonState();
+  // Signal that the sales dropdown is ready (for tests and UI)
+  setTimeout(() => {
+    document.dispatchEvent(new Event('salesDropdownReady'));
+  }, 0);
+}
+
+function updateIMEIs() {
+  const sel = $('#s-product');
+  const imeiSel = $('#s-imei');
+  if (!sel || !imeiSel) return;
+  imeiSel.innerHTML = '';
+  const pid = Number(sel.value);
+  if (!pid) {
+    imeiSel.disabled = true;
+    updateSellButtonState();
+    return;
+  }
+  getAll('products').then(products => {
+    const p = products.find(x => Number(x.id) === pid);
+    if (!p) {
+      imeiSel.disabled = true;
+      updateSellButtonState();
+      return;
+    }
+    (p.imeis || []).forEach(i => {
+      const o = document.createElement('option');
+      o.value = i;
+      o.textContent = i;
+      imeiSel.appendChild(o);
+    });
+    imeiSel.disabled = imeiSel.options.length === 0;
+    if (imeiSel.options.length > 0) {
+      imeiSel.selectedIndex = 0;
+    }
+    updateSellButtonState();
+  }).catch(() => {
+    imeiSel.disabled = true;
+    updateSellButtonState();
+  });
+}
+
+function updateSellButtonState() {
+  const sellBtn = $('#s-sell');
+  const imeiSel = $('#s-imei');
+  if (!sellBtn || !imeiSel) return;
+  const hasOne = imeiSel.options && imeiSel.options.length > 0 && imeiSel.value;
+  sellBtn.disabled = !hasOne;
+}
+
+async function sellWithCalculations(productId, imei){ const db = await openDB(); const tx = db.transaction(['products','invoices'],'readwrite'); const store = tx.objectStore('products'); const req = store.get(Number(productId)); req.onsuccess = async ()=>{ const p = req.result; if(!p) return toast('Product not found'); const idx = p.imeis.indexOf(imei); if(idx === -1) return toast('IMEI not available'); p.imeis.splice(idx,1); if(!p.imeis || p.imeis.length===0) await remove('products', p.id); else await put('products', p); const salePriceInput = Number($('#s-sale-price') && $('#s-sale-price').value || '') ; const salePrice = !isNaN(salePriceInput) && salePriceInput>0 ? salePriceInput : Number(p.price||0); const paid = Number($('#s-paid') && $('#s-paid').value) || salePrice; const prodCost = (p.imeiCosts && p.imeiCosts[imei] != null) ? Number(p.imeiCosts[imei]) : ((p.cost != null) ? Number(p.cost) : 0); const profit = +(salePrice - prodCost); const inv = { id: Date.now(), date: new Date().toISOString(), customer: ($('#s-customer-display') && $('#s-customer-display').value) || $('#s-customer') && $('#s-customer').value || 'Walk-in', items:[{ model:p.model, price:p.price, sale_price: salePrice, cost: prodCost, profit, imeis:[imei] }], subtotal: salePrice, total: salePrice, paid, change: +(paid - salePrice) }; await put('invoices', inv); toast('Sold'); refresh(); renderReceipt(inv) } }
+
+function buildReceiptMarkup(inv) {
+  const lines = (inv.items || [])
+    .map(it => {
+      const displayPrice = Number(it.sale_price != null ? it.sale_price : (it.price || 0));
+      const imeiStr = escapeHtml((it.imeis || []).join(', '));
+      return `<div class="r-line"><div class="r-desc">${escapeHtml(it.model)}</div><div class="r-price">${formatCurrency(displayPrice)}</div></div><div class="r-imei">IMEI: ${imeiStr}</div>`;
+    })
+    .join('');
+  const subtotal = formatCurrency(inv.subtotal || inv.total || 0);
+  const total = formatCurrency(inv.total || 0);
+  const paid = formatCurrency(inv.paid || 0);
+  const change = formatCurrency(inv.change || 0);
+  const cust = escapeHtml(inv.customer || 'Walk-in');
+  return `<div class="receipt"><div class="r-head"><strong>Mobile Inventory</strong><div>${new Date(inv.date).toLocaleString()}</div><div>Invoice #${inv.id}</div><div class="r-customer">Customer: ${cust}</div></div><div class="r-items">${lines}</div><div class="r-summary"><div><span>Subtotal</span><span>${subtotal}</span></div><div class="r-total"><strong>Total</strong><strong>${total}</strong></div><div><span>Paid</span><span>${paid}</span></div><div><span>Change</span><span>${change}</span></div></div></div>`;
+}
+
+const PRINT_RECEIPT_STYLES = `
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 12px; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; color: #111; background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .receipt { width: 320px; max-width: 100%; font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; font-size: 12px; background: #fff; padding: 12px; border-radius: 6px; }
+  .r-head strong { font-size: 14px; display: block; margin-bottom: 6px; }
+  .r-customer { margin-top: 6px; font-size: 11px; }
+  .r-line, .r-summary div { display: flex; justify-content: space-between; margin: 4px 0; gap: 8px; }
+  .r-imei { font-size: 11px; margin-bottom: 6px; word-break: break-all; }
+  .r-total { margin-top: 8px; padding-top: 8px; border-top: 1px solid #ddd; }
+  @media print {
+    body { margin: 0; padding: 4mm; }
+    .receipt { width: 72mm !important; border: none; box-shadow: none; }
+  }
+  @page { size: 80mm auto; margin: 4mm; }
+`;
+
+/** Print in a hidden iframe so the system print dialog works (main-page print often fails on mobile / hidden sections). */
+function printInvoice(inv) {
+  const docHtml = `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Invoice ${inv.id}</title><style>${PRINT_RECEIPT_STYLES}</style></head><body>${buildReceiptMarkup(inv)}</body></html>`;
+  const iframe = document.createElement('iframe');
+  iframe.setAttribute('title', 'Print invoice');
+  iframe.setAttribute('aria-hidden', 'true');
+  iframe.style.cssText = 'position:fixed;inset:0;width:0;height:0;border:0;opacity:0;pointer-events:none';
+  document.body.appendChild(iframe);
+  const idoc = iframe.contentWindow.document;
+  idoc.open();
+  idoc.write(docHtml);
+  idoc.close();
+  const win = iframe.contentWindow;
+  const cleanup = () => {
+    try {
+      iframe.remove();
+    } catch (e) {}
+  };
+  const doPrint = () => {
+    try {
+      win.focus();
+      win.print();
+    } catch (e) {
+      console.warn(e);
+      const w = window.open('', '_blank', 'noopener,noreferrer');
+      if (w) {
+        w.document.write(docHtml);
+        w.document.close();
+        w.focus();
+        setTimeout(() => {
+          try {
+            w.print();
+          } catch (e2) {
+            toast('Printing is not available here. Use Share → Print, or save as PDF from the browser menu.');
+          }
+        }, 200);
+      } else {
+        toast('Allow pop-ups for this page to print, or use the browser menu → Print.');
+      }
+    }
+    setTimeout(cleanup, 2500);
+  };
+  setTimeout(doPrint, 200);
+}
+
+function renderReceipt(inv) {
+  const r = $('#receipt');
+  if (!r) return;
+  r.innerHTML = `${buildReceiptMarkup(inv)}<div class="receipt-actions" style="margin-top:10px"><button type="button" class="btn receipt-print-btn">Print invoice</button></div>`;
+  r.style.display = '';
+  const btn = r.querySelector('.receipt-print-btn');
+  if (btn) btn.addEventListener('click', () => printInvoice(inv));
+}
+
+async function openProductEditModal(productId) {
+  const db = await openDB();
+  const p = await new Promise((res, rej) => {
+    const req = db.transaction('products').objectStore('products').get(Number(productId));
+    req.onsuccess = () => res(req.result);
+    req.onerror = () => rej(req.error);
+  });
+  if (!p) return toast('Product not found');
+
+  const modal = document.createElement('div');
+  modal.className = 'modal';
+  modal.setAttribute('role', 'dialog');
+  modal.setAttribute('aria-modal', 'true');
+  modal.setAttribute('aria-label', 'Edit product');
+
+  const imeiText = (p.imeis || [])
+    .map(imei => {
+      const c = p.imeiCosts && p.imeiCosts[imei] != null ? p.imeiCosts[imei] : '';
+      return c !== '' && c != null ? `${imei}|${c}` : imei;
+    })
+    .join('\n');
+
+  const imagesHtml =
+    p.images && p.images.length
+      ? `<div class="product-gallery edit-gallery">${p.images.map(img => `<img src="${escapeHtml(img)}" class="product-thumb" alt=""/>`).join('')}</div>`
+      : '';
+
+  modal.innerHTML = `
+    <div class="panel" style="max-width:520px;width:92vw">
+      <div class="panel-head"><h3 style="margin:0">Edit product</h3></div>
+      <div class="panel-body form">
+        <div class="form-group"><label for="edit-model">Model</label><input id="edit-model" type="text" autocomplete="off"></div>
+        <div class="form-group"><label for="edit-type">Type</label>
+          <select id="edit-type"><option value="boxed">Boxed</option><option value="opened">Opened</option></select></div>
+        <div class="form-row">
+          <div class="form-group"><label for="edit-price">Price (sale)</label><input id="edit-price" type="number" min="0" step="0.01"></div>
+          <div class="form-group"><label for="edit-cost">Cost (optional)</label><input id="edit-cost" type="number" min="0" step="0.01" placeholder="Default"></div>
+        </div>
+        <div class="form-group"><label for="edit-imeis">IMEIs (one per line, optional IMEI|cost)</label><textarea id="edit-imeis" rows="5"></textarea></div>
+        <div class="form-group"><label for="edit-images">Add images (optional)</label><input id="edit-images" type="file" accept="image/*" multiple></div>
+        ${imagesHtml}
+        <div class="form-actions" style="display:flex;flex-wrap:wrap;gap:10px;justify-content:flex-end;margin-top:16px">
+          <button type="button" class="btn btn-danger" id="edit-delete">Delete product</button>
+          <button type="button" class="btn" id="edit-cancel">Cancel</button>
+          <button type="button" class="btn btn-primary" id="edit-save">Save</button>
+        </div>
+      </div>
+    </div>`;
+
+  document.body.appendChild(modal);
+
+  const $m = sel => modal.querySelector(sel);
+  $m('#edit-model').value = p.model || '';
+  $m('#edit-type').value = p.type === 'opened' ? 'opened' : 'boxed';
+  $m('#edit-price').value = p.price != null ? String(p.price) : '';
+  $m('#edit-cost').value = p.cost != null ? String(p.cost) : '';
+  $m('#edit-imeis').value = imeiText;
+
+  function closeModal() {
+    modal.remove();
+    document.removeEventListener('keydown', onKey);
+  }
+
+  function onKey(e) {
+    if (e.key === 'Escape') closeModal();
+  }
+  document.addEventListener('keydown', onKey);
+
+  modal.addEventListener('click', e => {
+    if (e.target === modal) closeModal();
+  });
+
+  $m('#edit-cancel').addEventListener('click', closeModal);
+
+  $m('#edit-delete').addEventListener('click', async () => {
+    if (!confirm('Delete this product and all its IMEIs from inventory?')) return;
+    try {
+      await remove('products', p.id);
+      toast('Product removed');
+      closeModal();
+      await refresh();
+    } catch (err) {
+      console.error(err);
+      toast('Could not delete product');
+    }
+  });
+
+  $m('#edit-save').addEventListener('click', async () => {
+    const model = ($m('#edit-model').value || '').trim();
+    if (!model) return toast('Model is required');
+    const type = $m('#edit-type').value || 'boxed';
+    const price = Number($m('#edit-price').value) || 0;
+    const costRaw = $m('#edit-cost').value;
+    const cost = costRaw === '' || costRaw == null ? null : Number(costRaw);
+
+    const raw = ($m('#edit-imeis').value || '').split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+    const imeis = [];
+    const imeiCosts = {};
+    for (const line of raw) {
+      const parts = line.split(/\||,/).map(s => s.trim());
+      const imei = parts[0];
+      if (!imei) continue;
+      imeis.push(imei);
+      if (parts[1]) {
+        const c = Number(parts[1]);
+        if (!isNaN(c)) imeiCosts[imei] = c;
+      }
+    }
+    if (imeis.length === 0) return toast('At least one IMEI is required');
+
+    const seenLocal = new Set();
+    for (const imei of imeis) {
+      if (seenLocal.has(imei)) return toast('Duplicate IMEI in list: ' + imei);
+      seenLocal.add(imei);
+    }
+
+    const allProducts = await getAll('products');
+    const otherImeis = allProducts
+      .filter(x => Number(x.id) !== Number(p.id))
+      .flatMap(x => x.imeis || []);
+    const dup = imeis.find(i => otherImeis.includes(i));
+    if (dup) return toast('Duplicate IMEI already in inventory: ' + dup);
+
+    let images = Array.isArray(p.images) ? p.images.slice() : [];
+    const editImagesEl = $m('#edit-images');
+    if (editImagesEl && editImagesEl.files && editImagesEl.files.length) {
+      try {
+        let newImgs = await readFilesAsDataURLs(editImagesEl.files);
+        newImgs = newImgs.filter(img => {
+          const base64Length = img.length - img.indexOf(',') - 1;
+          const fileSizeInKB = (base64Length * 3) / 4 / 1024;
+          if (fileSizeInKB > 1500) {
+            toast(`Image too large (max ~1.5MB), skipped`);
+            return false;
+          }
+          return true;
+        });
+        images = images.concat(newImgs);
+      } catch (err) {
+        console.warn(err);
+        toast('Could not read new images');
+      }
+    }
+
+    const updated = {
+      id: p.id,
+      model,
+      type,
+      price,
+      imeis,
+      imeiCosts: Object.keys(imeiCosts).length ? imeiCosts : undefined
+    };
+    if (cost != null && !isNaN(cost)) updated.cost = cost;
+    else delete updated.cost;
+    if (!updated.imeiCosts) delete updated.imeiCosts;
+    if (images.length) updated.images = images;
+
+    try {
+      await put('products', updated);
+      toast('Product saved');
+      closeModal();
+      await refresh();
+    } catch (err) {
+      console.error(err);
+      toast('Save failed');
+    }
+  });
+
+  $m('#edit-model').focus();
+}
+
+function reportDateOpts() {
+  const { from, to } = parseDateInputs();
+  if (to) {
+    const end = new Date(to);
+    end.setHours(23, 59, 59, 999);
+    return { from, to: end };
+  }
+  return { from, to };
+}
+
+async function refreshReportsPanels() {
+  const state = await loadState();
+  const opts = reportDateOpts();
+  try {
+    renderAnalytics(state);
+  } catch (e) {
+    console.warn('renderAnalytics', e);
+  }
+  try {
+    renderAccounting(state, opts);
+    renderTopProducts(state, opts);
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+function renderRecentSales(state) {
+  const el = document.getElementById('recentSalesList');
+  if (!el) return;
+  const invoices = (state.invoices || [])
+    .slice()
+    .sort((a, b) => new Date(b.date) - new Date(a.date))
+    .slice(0, 20);
+  if (!invoices.length) {
+    el.innerHTML = '<p style="color:var(--text-muted); font-size:0.9rem">No sales yet.</p>';
+    return;
+  }
+  el.innerHTML = invoices.map(inv => {
+    const items = (inv.items || []).map(it => escapeHtml(it.model || '')).join(', ');
+    const date = inv.date ? new Date(inv.date).toLocaleString() : '';
+    return `<button type="button" class="recent-sale-row" data-invoice-id="${inv.id}"><span class="rs-date">${escapeHtml(date)}</span><span class="rs-items">${items}</span><span class="rs-total">${formatCurrency(inv.total)}</span><span class="rs-hint" aria-hidden="true">View invoice</span></button>`;
+  }).join('');
+}
+
+// ----- Form wiring (add/import/export/clear) -----
+async function refresh() {
+  const state = await loadState();
+  await renderProducts(state);
+  renderKPIs(state);
+  await renderSalesSelects(state);
+  renderRecentSales(state);
+  try {
+    renderAnalytics(state);
+    renderAccounting(state, reportDateOpts());
+    renderTopProducts(state, reportDateOpts());
+  } catch (e) {
+    console.warn('reports panels', e);
+  }
+}
+
+// Add product form
+const pfModel = $('#pf-model'); const pfImeis = $('#pf-imeis'); const pfSave = $('#pf-save'); const pfModelError = $('#pf-model-error');
+function validatePf(){ const model = (pfModel && pfModel.value||'').trim(); const imeis = (pfImeis && pfImeis.value||'').split(/\r?\n/).map(s=>s.trim()).filter(Boolean); let ok=true; if(!model){ if(pfModelError) pfModelError.textContent='Model is required'; ok=false } else if(pfModelError) pfModelError.textContent=''; if(imeis.length===0) ok=false; if(pfSave) pfSave.disabled = !ok; return { ok, model, imeis } }
+if(pfModel) pfModel.addEventListener('input', validatePf); if(pfImeis) pfImeis.addEventListener('input', validatePf);
+
+if(pfSave) pfSave.addEventListener('click', async ()=>{ const { ok, model } = validatePf(); if(!ok) return toast('Please fix form errors'); const type = $('#pf-type').value; const price = Number($('#pf-price').value) || 0; const cost = ($('#pf-cost') && $('#pf-cost').value) ? Number($('#pf-cost').value) : null; const raw = (pfImeis && pfImeis.value||'').split(/\r?\n/).map(s=>s.trim()).filter(Boolean); const imeis = [];
+  const imeiCosts = {};
+  for(const line of raw){
+    const parts = line.split(/\||,/).map(s=>s.trim());
+    const imei = parts[0];
+    if(!imei) continue;
+    imeis.push(imei);
+    if(parts[1]){
+      const c = Number(parts[1]);
+      if(!isNaN(c)) imeiCosts[imei]=c
+    }
+  }
+  let imagesData = [];
+  const pfImagesEl = document.getElementById('pf-images');
+  if (pfImagesEl && pfImagesEl.files && pfImagesEl.files.length) {
+    try {
+      imagesData = await readFilesAsDataURLs(pfImagesEl.files);
+      // Validate image size and format
+      imagesData = imagesData.filter(img => {
+        const base64Length = img.length - img.indexOf(',') - 1;
+        const fileSizeInKB = (base64Length * 3) / 4 / 1024;
+        if (fileSizeInKB > 1500) { // Increased limit to 1.5MB
+          console.warn('Image too large, skipping:', fileSizeInKB, 'KB');
+          toast(`Image too large: ${fileSizeInKB.toFixed(2)} KB. Max size is 1.5MB.`);
+          return false;
+        }
+        return true;
+      });
+    } catch (err) {
+      console.warn('Images read failed', err);
+      toast('Failed to process images. Please try again.');
+    }
+  }
+  if(imeis.length===0){ toast('Provide at least one IMEI'); return }
+  const existing = (await getAll('products')).flatMap(p=>p.imeis||[]);
+  const dup = imeis.find(i=> existing.includes(i));
+  if(dup){ toast('Duplicate IMEI: '+dup); return }
+  let created=0;
+  for(const imei of imeis){
+    const id = Date.now()+Math.floor(Math.random()*1000);
+    const productObj = { id, model, type, price, imeis:[imei] };
+    if(cost!=null) productObj.cost = cost;
+    if(imeiCosts[imei]!=null){ productObj.imeiCosts = {}; productObj.imeiCosts[imei]=imeiCosts[imei] }
+    if(imagesData && imagesData.length) productObj.images = imagesData.slice();
+    await put('products', productObj);
+    created++
+  }
+  toast(`Saved ${created} product${created>1?'s':''}`);
+  await refresh();
+  const clearBtn = $('#pf-clear');
+  if(clearBtn) clearBtn.click();
+});
+
+const pfClearBtn = $('#pf-clear'); if(pfClearBtn) pfClearBtn.addEventListener('click', ()=>{ if(pfModel) pfModel.value=''; if($('#pf-price')) $('#pf-price').value=''; if($('#pf-cost')) $('#pf-cost').value=''; if(pfImeis) pfImeis.value=''; const pfImg = document.getElementById('pf-images'); if(pfImg) pfImg.value=''; validatePf() })
+
+// import/export
+const exportBtnEl = $('#export-btn'); if(exportBtnEl) exportBtnEl.addEventListener('click', async ()=>{ const state = await loadState(); const blob = new Blob([JSON.stringify(state,null,2)],{type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='inventory-backup.json'; a.click(); URL.revokeObjectURL(a.href) })
+const fileImportEl = $('#file-import'); if(fileImportEl) fileImportEl.addEventListener('change', async e=>{ const f = e.target.files[0]; if(!f) return; const txt = await f.text(); try{ const obj = JSON.parse(txt); if(obj.products){ for(const p of obj.products) await put('products', p); for(const inv of (obj.invoices||[])) await put('invoices', inv); toast('Imported JSON'); refresh(); return } }catch(_){} try{ const rows = parseCSV(txt); const existing = (await getAll('products')).flatMap(p=>p.imeis||[]); let added=0, skipped=0; for(const r of rows){ const rawImeis = (r.imeis || r.IMEIs || r.imei || r.IMEI || ''); const imeis = String(rawImeis).includes(';') ? String(rawImeis).split(';').map(s=>s.trim()).filter(Boolean) : (rawImeis ? [String(rawImeis).trim()] : []); const filtered = imeis.filter(i=> !existing.includes(i)); skipped += imeis.length - filtered.length; if(filtered.length===0 && imeis.length>0) continue; const price = Number(r.price)||0; const cost = (r.cost||r.Cost||r.costPrice) ? Number(r.cost||r.Cost||r.costPrice) : undefined; for(const imei of filtered){ const id = Date.now()+Math.floor(Math.random()*1000); const obj = { id, model:r.model||r.Model, type:r.type||r.Type||'boxed', price, imeis:[imei] }; if(typeof cost !== 'undefined' && !isNaN(cost)) obj.cost = cost; await put('products', obj); added++ } } toast(`Imported CSV: ${added} products, ${skipped} duplicate IMEIs skipped`); refresh(); return }catch(err){ toast('Import failed') } })
+const importBtn = $('#import-btn'); if(importBtn) importBtn.addEventListener('click', ()=>{ const fi = document.getElementById('file-import'); if(fi) fi.click(); else toast('File input not available') })
+
+// CSV template and exports
+async function downloadCSVTemplate(){ const headers = ['model','type','price','cost','imei']; try{ const state = await loadState(); const products = state.products || []; const rows = [headers]; products.forEach(p=>{ const imei = (p.imeis && p.imeis[0]) || ''; rows.push([p.model||'', p.type||'boxed', (p.price!=null?String(p.price):''), (p.cost!=null?String(p.cost):''), imei]) }); const csv = rows.map(r=> r.map(c=> '"'+String(c).replace(/"/g,'""')+'"').join(',')).join('\n') + '\n'; const b = new Blob([csv],{type:'text/csv'}); const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = 'inventory-template.csv'; a.click(); URL.revokeObjectURL(a.href); toast('CSV template downloaded') }catch(err){ console.error(err); toast('Failed to build CSV template') } }
+const csvTpl = $('#csv-template'); if(csvTpl) csvTpl.addEventListener('click', downloadCSVTemplate)
+const exportSalesBtn = $('#export-sales-csv'); if(exportSalesBtn) exportSalesBtn.addEventListener('click', async ()=>{ const state = await loadState(); exportSalesCSV(state) })
+
+// clear all data
+const clearDataBtn = $('#clear-data'); if(clearDataBtn) clearDataBtn.addEventListener('click', async ()=>{ if(!confirm('This will permanently delete ALL products and sales data. Proceed?')) return; try{ const db = await openDB(); await new Promise((res,rej)=>{ const t = db.transaction(['products','invoices'],'readwrite'); t.objectStore('products').clear(); t.objectStore('invoices').clear(); t.oncomplete = ()=> res(); t.onerror = ()=> rej(t.error) }); try{ localStorage.removeItem('theme') }catch(_){ } toast('All data cleared'); await refresh(); }catch(err){ console.error('Clear failed', err); toast('Failed to clear data') } })
+
+// search
+const globalSearch = $('#global-search'); if(globalSearch) globalSearch.addEventListener('input', e=>{ const q = (e.target.value||'').toLowerCase(); const invList = document.getElementById('inventoryList'); if(invList){ invList.querySelectorAll('.product-card').forEach(card=>{ const text = card.textContent.toLowerCase(); card.style.display = q ? (text.includes(q) ? '' : 'none') : '' }); return } const tableSelector = '#products-table tbody tr'; document.querySelectorAll(tableSelector).forEach(tr=>{ tr.style.display = q ? (tr.textContent.toLowerCase().includes(q) ? '' : 'none') : '' }) })
+
+// nav and shortcuts
+
+document.querySelectorAll('.nav-btn').forEach(b => {
+  b.addEventListener('click', async () => {
+    document.querySelectorAll('.nav-btn').forEach(x => x.classList.remove('active'));
+    b.classList.add('active');
+    document.querySelectorAll('.view').forEach(v => v.hidden = v.dataset.view !== b.dataset.view);
+    if (b.dataset.view === 'reports') {
+      refreshReportsPanels().catch(e => console.error(e));
+    } else if (b.dataset.view === 'sales') {
+      await refresh();
+    }
+  });
+});
+
+window.showView = async function(view) {
+  document.querySelectorAll('.nav-btn').forEach(x => x.classList.toggle('active', x.dataset.view === view));
+  document.querySelectorAll('.view').forEach(v => v.hidden = v.dataset.view !== view);
+  if (view === 'reports') {
+    refreshReportsPanels().catch(e => console.error(e));
+  } else if (view === 'sales') {
+    await refresh();
+  }
+};
+
+// compute change display
+function computeChangeDisplay(){ const spEl = $('#s-sale-price'); const paidEl = $('#s-paid'); const changeEl = $('#s-change'); if(!spEl || !paidEl || !changeEl) return; const sale = Number(spEl.value) || 0; const paid = Number(paidEl.value) || 0; const change = +(paid - sale); changeEl.value = change < 0 ? ('-Rs. '+Math.abs(change).toFixed(2)) : ('Rs. '+change.toFixed(2)); }
+const spInput = $('#s-sale-price'); if(spInput) spInput.addEventListener('input', computeChangeDisplay); const paidInput = $('#s-paid'); if(paidInput) paidInput.addEventListener('input', computeChangeDisplay);
+
+// sell wiring
+const sSellBtn = $('#s-sell'); if(sSellBtn) sSellBtn.addEventListener('click', async ()=>{ const pid = Number($('#s-product').value); const imei = $('#s-imei').value; if(!pid || !imei) return toast('Select product and IMEI'); if(typeof imei === 'string' && (imei.includes(',') || imei.includes(';') || imei.includes('\n'))){ return toast('Select a single IMEI (one item per sale)') } await sellWithCalculations(pid, imei); updateSellButtonState() })
+document.addEventListener('change', (e)=>{ if(!e.target) return; if(e.target.id === 's-product'){ const pid = Number(e.target.value); if(!pid) return; getAll('products').then(products=>{ const p = products.find(x=> Number(x.id) === pid); const sp = document.getElementById('s-sale-price'); if(sp) sp.value = p ? (Number(p.price) || '') : ''; updateIMEIs() }).catch(()=>{}) } })
+
+// theme
+function applyTheme(theme){ document.documentElement.setAttribute('data-theme', theme); const btn = $('#theme-toggle'); if(btn) btn.textContent = theme==='dark' ? 'Light' : 'Dark'; }
+const savedTheme = localStorage.getItem('theme') || 'light'; applyTheme(savedTheme); const themeBtn = $('#theme-toggle'); if(themeBtn) themeBtn.addEventListener('click', ()=>{ const t = document.documentElement.getAttribute('data-theme')==='dark' ? 'light' : 'dark'; applyTheme(t); localStorage.setItem('theme', t); toast('Theme: '+t) })
+
+// global error handlers
+if(typeof window.addEventListener === 'function'){ window.addEventListener('error', e=>{ try{ toast('Error: '+(e.message||e)); debug('Error: '+(e.message||e),'error') }catch(_){} }); window.addEventListener('unhandledrejection', e=>{ console.error('UnhandledRejection', e); debug('UnhandledRejection: '+(e.reason&&e.reason.message?e.reason.message:e.reason),'error') }) }
+
+function inventorySortOrder() {
+  const el = document.getElementById('sort-select');
+  return el && el.value === 'price-desc' ? 'price-desc' : 'price-asc';
+}
+
+/** Ordered list of image data URLs; inventory card uses index 0 when multiple exist. */
+function productImageList(p) {
+  if (!p || p.images == null) return [];
+  const raw = Array.isArray(p.images) ? p.images : [p.images];
+  return raw.filter(u => typeof u === 'string' && u.trim().length > 0);
+}
+
+// Render products in inventoryList as .product-card elements (with .product-name for test compatibility)
+async function renderProducts(state) {
+  const inv = document.getElementById('inventoryList');
+  if (!inv) return;
+  inv.innerHTML = '';
+  let products = [...(state && state.products ? state.products : await getAll('products'))];
+  const desc = inventorySortOrder() === 'price-desc';
+  products.sort((a, b) => {
+    const pa = Number(a.price) || 0;
+    const pb = Number(b.price) || 0;
+    return desc ? pb - pa : pa - pb;
+  });
+  products.forEach(p => {
+    (p.imeis || []).forEach(imei => {
+      const card = document.createElement('div');
+      card.className = 'product-card product-card--clickable';
+      card.dataset.productId = String(p.id);
+      card.tabIndex = 0;
+      card.setAttribute('role', 'button');
+      card.setAttribute(
+        'aria-label',
+        `Edit ${(p.model || 'product').replace(/"/g, '')} — IMEI ${(imei || '').replace(/"/g, '')}`
+      );
+      const body = document.createElement('div');
+      body.className = 'card-body';
+      const imgs = productImageList(p);
+      const thumbUrl = imgs[0] || null;
+      if (thumbUrl) {
+        const img = document.createElement('img');
+        img.className = 'card-img';
+        img.alt = '';
+        img.loading = 'lazy';
+        img.decoding = 'async';
+        img.src = thumbUrl;
+        body.appendChild(img);
+      } else {
+        const ph = document.createElement('div');
+        ph.className = 'card-img placeholder';
+        ph.setAttribute('aria-hidden', 'true');
+        ph.textContent = '📱';
+        body.appendChild(ph);
+      }
+      body.insertAdjacentHTML(
+        'beforeend',
+        `<div class="card-title product-name">${escapeHtml(p.model || '')}</div>
+        <div class="card-sub">${escapeHtml(p.type || '')}</div>
+        <div class="card-price">${formatCurrency(p.price)}</div>
+        <div class="card-imei">${escapeHtml(imei)}</div>
+        <div class="card-hint">Tap to edit</div>`
+      );
+      card.appendChild(body);
+      inv.appendChild(card);
+    });
+  });
+}
+
+(function attachInventoryCardActivation() {
+  const inv = document.getElementById('inventoryList');
+  if (!inv || inv._inventoryEditBound) return;
+  inv._inventoryEditBound = true;
+  inv.addEventListener('click', e => {
+    const card = e.target.closest('.product-card');
+    if (!card || !inv.contains(card)) return;
+    const id = card.dataset.productId;
+    if (id) openProductEditModal(Number(id));
+  });
+  inv.addEventListener('keydown', e => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    const card = e.target.closest('.product-card');
+    if (!card || !inv.contains(card)) return;
+    e.preventDefault();
+    const id = card.dataset.productId;
+    if (id) openProductEditModal(Number(id));
+  });
+})();
+
+(function attachRecentSalesInvoiceView() {
+  const list = document.getElementById('recentSalesList');
+  if (!list || list._invoiceClickBound) return;
+  list._invoiceClickBound = true;
+  list.addEventListener('click', async e => {
+    const row = e.target.closest('.recent-sale-row');
+    if (!row || !list.contains(row)) return;
+    const id = row.getAttribute('data-invoice-id');
+    if (!id) return;
+    const invoices = await getAll('invoices');
+    const inv = invoices.find(x => String(x.id) === String(id));
+    if (!inv) return toast('Invoice not found');
+    if (typeof window.showView === 'function') await window.showView('sales');
+    renderReceipt(inv);
+    const receiptEl = document.getElementById('receipt');
+    if (receiptEl) receiptEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  });
+})();
+
+window.renderProducts = renderProducts;
+window.refresh = refresh;
+
+const sortSelectEl = document.getElementById('sort-select');
+if (sortSelectEl) {
+  sortSelectEl.addEventListener('change', () => refresh().catch(e => console.error(e)));
+}
+
+const reportsRefreshBtn = $('#reports-refresh');
+if (reportsRefreshBtn) {
+  reportsRefreshBtn.addEventListener('click', () => refreshReportsPanels().catch(e => console.error(e)));
+}
+const reportsExportAccBtn = $('#reports-export-accounting');
+if (reportsExportAccBtn) {
+  reportsExportAccBtn.addEventListener('click', async () => {
+    const state = await loadState();
+    exportAccountingCSV(state, reportDateOpts());
+  });
+}
+const reportsExportSalesBtn = $('#reports-export-sales');
+if (reportsExportSalesBtn) {
+  reportsExportSalesBtn.addEventListener('click', async () => {
+    const state = await loadState();
+    exportSalesCSV(state);
+  });
+}
+
+// init
+(async function init(){
+  try {
+    await refresh();
+    debug('Ready');
+    window.appRefresh = refresh;
+    console.log('App initialized');
+  } catch(err) {
+    console.error(err);
+    toast('Failed to initialize app: '+(err.message||err));
+    debug('Init error: '+(err.message||err),'error');
+  }
+})();
+
+</script>
+</body>
+</html>
