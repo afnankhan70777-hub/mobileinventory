@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mobile Inventory — Integrated</title>
+    <title>110MobileShop — Integrated</title>
     <link rel="stylesheet" href="styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -621,7 +621,7 @@ function buildReceiptMarkup(inv) {
   const paid = formatCurrency(inv.paid || 0);
   const change = formatCurrency(inv.change || 0);
   const cust = escapeHtml(inv.customer || 'Walk-in');
-  return `<div class="receipt"><div class="r-head"><strong>Mobile Inventory</strong><div>${new Date(inv.date).toLocaleString()}</div><div>Invoice #${inv.id}</div><div class="r-customer">Customer: ${cust}</div></div><div class="r-items">${lines}</div><div class="r-summary"><div><span>Subtotal</span><span>${subtotal}</span></div><div class="r-total"><strong>Total</strong><strong>${total}</strong></div><div><span>Paid</span><span>${paid}</span></div><div><span>Change</span><span>${change}</span></div></div></div>`;
+  return `<div class="receipt"><div class="r-head"><strong>110MobileShop</strong><div>${new Date(inv.date).toLocaleString()}</div><div>Invoice #${inv.id}</div><div class="r-customer">Customer: ${cust}</div></div><div class="r-items">${lines}</div><div class="r-summary"><div><span>Subtotal</span><span>${subtotal}</span></div><div class="r-total"><strong>Total</strong><strong>${total}</strong></div><div><span>Paid</span><span>${paid}</span></div><div><span>Change</span><span>${change}</span></div></div></div>`;
 }
 
 const PRINT_RECEIPT_STYLES = `
